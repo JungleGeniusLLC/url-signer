@@ -33,13 +33,29 @@ abstract class BaseUrlSigner implements UrlSigner
     protected $signatureParameter;
 
     /**
+     * Use standard key value pairs for the signature.
+     *
+     * @var bool
+     */
+    protected $useKeyValue;
+
+    /**
+     * Use only the URL's path and query for the signature.
+     *
+     * @var bool
+     */
+    protected $usePartialUrl;
+
+    /**
      * @param string $signatureKey
      * @param string $expiresParameter
      * @param string $signatureParameter
+     * @param bool $useKeyValue
+     * @param bool $usePartialUrl
      *
      * @throws InvalidSignatureKey
      */
-    public function __construct($signatureKey, $expiresParameter = 'expires', $signatureParameter = 'signature')
+    public function __construct($signatureKey, $expiresParameter = 'expires', $signatureParameter = 'signature', $useKeyValue = false, $usePartialUrl = false)
     {
         if ($signatureKey == '') {
             throw new InvalidSignatureKey('The signature key is empty');
@@ -48,6 +64,8 @@ abstract class BaseUrlSigner implements UrlSigner
         $this->signatureKey = $signatureKey;
         $this->expiresParameter = $expiresParameter;
         $this->signatureParameter = $signatureParameter;
+        $this->useKeyValue = $useKeyValue;
+        $this->usePartialUrl = $usePartialUrl;
     }
 
     /**
@@ -65,7 +83,7 @@ abstract class BaseUrlSigner implements UrlSigner
         $url = Http::createFromString($url);
 
         $expiration = $this->getExpirationTimestamp($expiration);
-        $signature = $this->createSignature((string) $url, $expiration);
+        $signature = $this->createSignature((string) $url, $expiration, $this->useKeyValue, $this->usePartialUrl);
 
         return (string) $this->signUrl($url, $expiration, $signature);
     }
@@ -127,7 +145,7 @@ abstract class BaseUrlSigner implements UrlSigner
      *
      * @return string
      */
-    abstract protected function createSignature($url, string $expiration);
+    abstract protected function createSignature($url, string $expiration, $useKeyValue = false, $usePartialUrl = false);
 
     /**
      * Check if a query is missing a necessary parameter.
@@ -222,7 +240,7 @@ abstract class BaseUrlSigner implements UrlSigner
 
         $intendedUrl = $this->getIntendedUrl($url);
 
-        $validSignature = $this->createSignature($intendedUrl, $expiration);
+        $validSignature = $this->createSignature($intendedUrl, $expiration, $this->useKeyValue, $this->usePartialUrl);
 
         return hash_equals($validSignature, $providedSignature);
     }
